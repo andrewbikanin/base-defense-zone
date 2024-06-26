@@ -15,12 +15,40 @@ class Player {
         this.y = y;
         this.radius = radius;
         this.color = color;
+        this.velocity = {
+            x: 0,
+            y: 0
+        }
     }
     draw() {
         c.beginPath();
         c.arc(this.x, this.y, this.radius, 0, Math.PI * 2, false);
         c.fillStyle = this.color;
         c.fill()
+    }
+    
+    update() {
+        this.draw();
+
+        const friction = 0.99;
+
+        this.velocity.x *= friction;
+        this.velocity.y *= friction;
+
+        if (this.x + this.radius + this.velocity.x <= canvas.width && 
+            this.x - this.radius + this.velocity.x >= 0
+        ) {
+            this.x += this.velocity.x;
+        } else {
+            this.velocity.x = 0;
+        }
+        if (this.y + this.radius + this.velocity.y <= canvas.height && 
+            this.y - this.radius + this.velocity.y >= 0
+        ) {
+            this.y += this.velocity.y;
+        } else {
+            this.velocity.y = 0;
+        }
     }
 }
 
@@ -55,6 +83,20 @@ class Enemy {
         this.radius = radius;
         this.color = color;
         this.velocity = velocity;
+        this.type = 'Linear';
+        this.radians = 0;
+        this.center = {
+            x,
+            y
+        }
+
+        if (Math.random() < 0.5) {
+            this.type = 'Homing';
+
+            if (Math.random() < 0.5) {
+                this.type = 'Spinning';
+            }
+        }
     }
 
     draw() {
@@ -66,8 +108,28 @@ class Enemy {
 
     update() {
         this.draw();
-        this.x = this.x + this.velocity.x;
-        this.y = this.y + this.velocity.y;
+        this.radians += 0.1;
+
+        if (this.type == 'Spinning') {
+            this.center.x += this.velocity.x;
+            this.center.y += this.velocity.y;       
+    
+            this.x = this.center.x + Math.cos(this.radians) * 30;
+            this.y = this.center.y + Math.sin(this.radians) * 30;
+        }
+
+        else if (this.type === 'Homing') {
+            const angle = Math.atan2(player.y - this.y, player.x - this.x);
+            this.velocity.x = Math.cos(angle);
+            this.velocity.y = Math.sin(angle);
+
+            this.x = this.x + this.velocity.x;
+            this.y = this.y + this.velocity.y;
+        } else {
+            // linear
+            this.x = this.x + this.velocity.x;
+            this.y = this.y + this.velocity.y;
+        }
     }
 
 }
@@ -158,7 +220,7 @@ function animate() {
     animationId = requestAnimationFrame(animate);
     c.fillStyle = 'rgba(0, 0, 0, 0.1)';
     c.fillRect(0, 0, canvas.width, canvas.height);
-    player.draw();
+    player.update();
     for (let index = particles.length - 1; index >= 0; index--) {
         const particle = particles[index];    
         if (particle.alpha <= 0) {
@@ -190,7 +252,7 @@ function animate() {
         if (dist - enemy.radius - player.radius < 1) {
             cancelAnimationFrame(animationId);
             clearInterval(intervalId);
-            gameOverUI.style.display = 'block';
+            gameOverUI.style.display = 'flex';
             gsap.fromTo('#game_over', {scale: 0.8, opacity: 0}, {scale: 1, opacity: 1, ease: 'expo'});
         }
 
@@ -235,15 +297,15 @@ function animate() {
 
 window.addEventListener('click', (event) => {
     const angle = Math.atan2(
-        (event.clientY - canvas.height / 2), 
-        (event.clientX - canvas.width / 2));
+        (event.clientY - player.y), 
+        (event.clientX - player.x));
     const velocity = {
         x: Math.cos(angle) * 4,
         y: Math.sin(angle) * 4
     }
     projectiles.push(new Projectile(
-        canvas.width / 2,
-        canvas.height / 2,
+        player.x,
+        player.y,
         5,
         'white',
         velocity
@@ -279,3 +341,20 @@ buttonStart.addEventListener('click', () => {
         }
     });
 });
+
+window.addEventListener('keydown', (event) => {
+    switch (event.key) {
+        case 'd':
+            player.velocity.x += 1;
+            break;
+        case 'a':
+            player.velocity.x -= 1;
+            break; 
+        case 'w':
+            player.velocity.y -= 1;
+            break;  
+        case 's':
+            player.velocity.y += 1;
+            break;                                    
+    }
+}); 
