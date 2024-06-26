@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Strike game</title>
+    <style>
+        body {
+            margin: 0;
+            position: relative;
+            background-color: #000;
+        }
+        div {
+            top: 20px;
+            left: 32px;
+            color: #fff;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            user-select: none;
+        }
+        .absolute {
+            position: absolute;
+        }
+        .modal {
+            top: 0;
+            left: 0;
+            height: 100%;
+            width: 100%;
+        }
+        .modal_container {
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            max-width: 400px;
+            width: 100%;
+        }
+        .game_over {
+            padding: 40px;
+            border-radius: 16px;
+            text-align: center;
+            background: rgba( 255, 255, 255, 0.1 );
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur( 16px );
+            -webkit-backdrop-filter: blur( 16px );
+            border: 1px solid rgba( 255, 255, 255, 0.1);
+            user-select: none;
+        }
+        .game_over label {
+            font-size: 14px;
+            color: #cecece;
+            font-weight: 500;
+            margin-bottom: 12px;
+            display: block;
+            user-select: none;
+        }        
+        .game_over h1 {
+            color: #fff;
+            font-size: 72px;
+            margin: 0 auto;
+            user-select: none;
+        }
+        .game_over.new_game h1 {
+            font-size: 40px;
+        }
+        .game_over p {
+            margin: 0 auto;
+            color: #fff;
+            user-select: none;
+        }
+
+        #game_over {
+            display: none;
+        }
+        .btn {
+            user-select: none;
+            align-items: center;
+            background-color: initial;
+            background-image: linear-gradient(144deg,#AF40FF, #5B42F3 50%,#00DDEB);
+            border-radius: 16px;
+            border-width: 0;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, .1),0 3px 6px rgba(0, 0, 0, .05);
+            box-sizing: border-box;
+            color: #fff;
+            cursor: pointer;
+            display: inline-flex;
+            flex-direction: column;
+            font-size: 18px;
+            height: 52px;
+            justify-content: center;
+            line-height: 1;
+            margin: 8px auto 20px;
+            outline: none;
+            overflow: hidden;
+            max-width: 400px;
+            width: 100%;
+            text-align: center;
+            text-decoration: none;
+            transform: translate3d(0, 0, 0);
+            transition: all 150ms;
+            vertical-align: baseline;
+            white-space: nowrap;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+            }
+
+        .btn:hover {
+            box-shadow: rgba(0, 1, 0, .2) 0 2px 8px;
+            opacity: .85;
+            }
+
+        .btn:active {
+            outline: 0;
+            }
+
+        .btn:focus {
+            box-shadow: rgba(0, 0, 0, .5) 0 0 0 3px;
+            }
+
+        @media (max-width: 420px) {
+            .btn {
+                    height: 48px;
+                }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="absolute">
+        <span>Score: <span class="scoreEl">0</span></span>
+    </div>
+    <div class="modal absolute" id="game_over">
+        <div class="modal_container absolute">
+            <div class="game_over">
+                <label>Game Over</label>
+                <h1 class="scoreEl">0</h1>
+                <p>Points</p>
+            </div>
+            <button class="btn" id="restart">New game</button>   
+        </div> 
+    </div>
+    <div class="modal absolute" id="start">
+        <div class="modal_container absolute">
+            <div class="game_over new_game">
+                <h1>Base Defence Game</h1>
+            </div>
+            <button class="btn" id="start">Start game</button>   
+        </div> 
+    </div>    
+    <canvas></canvas>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" integrity="sha512-7eHRwcbYkK4d9g/6tD/mhkf++eoTHwpNM9woBxtPUBWm67zeAfFC+HrdoE2GanKeocly/VxeLvIqwvCdk7qScg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="./index.js"></script>
+    
+</body>
+</html>
+
+
