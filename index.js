@@ -9,163 +9,6 @@ const buttonStart = document.querySelector('#start');
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-class Player {
-    constructor(x, y, radius, color) {
-        this.x = x;
-        this.y = y;
-        this.radius = radius;
-        this.color = color;
-        this.velocity = {
-            x: 0,
-            y: 0
-        }
-    }
-    draw() {
-        c.beginPath();
-        c.arc(this.x, this.y, this.radius, 0, Math.PI * 2, false);
-        c.fillStyle = this.color;
-        c.fill()
-    }
-    
-    update() {
-        this.draw();
-
-        const friction = 0.99;
-
-        this.velocity.x *= friction;
-        this.velocity.y *= friction;
-
-        if (this.x + this.radius + this.velocity.x <= canvas.width && 
-            this.x - this.radius + this.velocity.x >= 0
-        ) {
-            this.x += this.velocity.x;
-        } else {
-            this.velocity.x = 0;
-        }
-        if (this.y + this.radius + this.velocity.y <= canvas.height && 
-            this.y - this.radius + this.velocity.y >= 0
-        ) {
-            this.y += this.velocity.y;
-        } else {
-            this.velocity.y = 0;
-        }
-    }
-}
-
-class Projectile {
-    constructor(x, y, radius, color, velocity) {
-        this.x = x;
-        this.y = y;
-        this.radius = radius;
-        this.color = color;
-        this.velocity = velocity;
-    }
-
-    draw() {
-        c.beginPath();
-        c.arc(this.x, this.y, this.radius, 0, Math.PI * 2, false);
-        c.fillStyle = this.color;
-        c.fill()
-    }
-
-    update() {
-        this.draw();
-        this.x = this.x + this.velocity.x;
-        this.y = this.y + this.velocity.y;
-    }
-
-}
-
-class Enemy {
-    constructor(x, y, radius, color, velocity) {
-        this.x = x;
-        this.y = y;
-        this.radius = radius;
-        this.color = color;
-        this.velocity = velocity;
-        this.type = 'Linear';
-        this.radians = 0;
-        this.center = {
-            x,
-            y
-        }
-
-        if (Math.random() < 0.5) {
-            this.type = 'Homing';
-
-            if (Math.random() < 0.5) {
-                this.type = 'Spinning';
-            }
-        }
-    }
-
-    draw() {
-        c.beginPath();
-        c.arc(this.x, this.y, this.radius, 0, Math.PI * 2, false);
-        c.fillStyle = this.color;
-        c.fill()
-    }
-
-    update() {
-        this.draw();
-        this.radians += 0.1;
-
-        if (this.type == 'Spinning') {
-            this.center.x += this.velocity.x;
-            this.center.y += this.velocity.y;       
-    
-            this.x = this.center.x + Math.cos(this.radians) * 30;
-            this.y = this.center.y + Math.sin(this.radians) * 30;
-        }
-
-        else if (this.type === 'Homing') {
-            const angle = Math.atan2(player.y - this.y, player.x - this.x);
-            this.velocity.x = Math.cos(angle);
-            this.velocity.y = Math.sin(angle);
-
-            this.x = this.x + this.velocity.x;
-            this.y = this.y + this.velocity.y;
-        } else {
-            // linear
-            this.x = this.x + this.velocity.x;
-            this.y = this.y + this.velocity.y;
-        }
-    }
-
-}
-
-const friction = 0.98;
-class Particle {
-    constructor(x, y, radius, color, velocity) {
-        this.x = x;
-        this.y = y;
-        this.radius = radius;
-        this.color = color;
-        this.velocity = velocity;
-        this.alpha = 1;
-    }
-
-    draw() {
-        c.save();
-        c.globalAlpha = this.alpha;
-        c.beginPath();
-        c.arc(this.x, this.y, this.radius, 0, Math.PI * 2, false);
-        c.fillStyle = this.color;
-        c.fill()
-        c.restore();
-    }
-
-    update() {
-        this.draw();
-        this.velocity.x *= friction;
-        this.velocity.y *= friction;
-        this.x = this.x + this.velocity.x;
-        this.y = this.y + this.velocity.y;
-        this.alpha -= 0.01;
-    }
-
-}
-
 const x = canvas.width / 2;
 const y = canvas.height / 2;
 
@@ -176,7 +19,10 @@ let enemies = [];
 let particles = [];
 let animationId;
 let intervalId;
+let spawnPowerUpsId;
 let score = 0;
+let powerUps = [];
+let frames = 0;
 
 function init() {
     player = new Player(x, y, 10, 'white');
@@ -186,6 +32,8 @@ function init() {
     animationId;
     score = 0;
     scoreEl.forEach(item => item.innerHTML = score);
+    powerUps = [];
+    frames = 0;
 }
 
 function spawnEnemies() {
@@ -216,11 +64,90 @@ function spawnEnemies() {
     }, 1000);
 }
 
+function spawnPowerUps() {
+    spawnPowerUpsId = setInterval(() => {
+        powerUps.push(new PowerUp({
+            position: {
+                x: -30,
+                y: Math.random() * (canvas.height - 100) + 50
+            },
+            velocity: {
+                x: Math.random() + 2,
+                y: 0
+            }
+        }));
+    }, 10000);
+}
+
+function createScoreLabel({ position, score }) {
+    const scoreLabel = document.createElement('label');
+    scoreLabel.innerHTML = score;
+    scoreLabel.style.color = 'white';
+    scoreLabel.style.position = 'absolute';
+    scoreLabel.style.left = position.x + 'px';
+    scoreLabel.style.top = position.y + 'px';
+    scoreLabel.style.userSelect = 'none';
+    document.body.appendChild(scoreLabel);
+    gsap.to(scoreLabel, {
+        opacity: 0,
+        y: -30,
+        duration: 0.75,
+        onComplete: () => {
+            scoreLabel.parentNode.removeChild(scoreLabel);
+        }
+    });
+}
+
 function animate() {
     animationId = requestAnimationFrame(animate);
     c.fillStyle = 'rgba(0, 0, 0, 0.1)';
     c.fillRect(0, 0, canvas.width, canvas.height);
+    frames++;
+
     player.update();
+
+    for (let i = powerUps.length - 1; i >= 0; i--) {
+        const powerUp = powerUps[i];
+        if (powerUp.position.x > canvas.width) {
+            powerUps.splice(i, 1);
+        } else {
+            powerUp.update();
+        }
+
+        const dist = Math.hypot(
+            player.x - powerUp.position.x, 
+            player.y - powerUp.position.y
+        );
+
+        // gain power up
+        if (dist < powerUp.image.height / 2 + player.radius) {
+            powerUps.splice(i, 1);
+            player.powerUp = 'MachineGun';
+            player.color = 'yellow';
+
+            //power up runs out
+            setTimeout(() => {
+                player.powerUp = null;
+                player.color = 'white';
+            }, 5000);
+        }
+    }
+
+    // machine gun animation / implementation
+    if (player.powerUp === 'MachineGun') {
+        const angle = Math.atan2(
+            (mouse.position.y - player.y), 
+            (mouse.position.x - player.x));
+        const velocity = {
+            x: Math.cos(angle) * 4,
+            y: Math.sin(angle) * 4
+        }        
+
+        if (frames % 3 === 0) {
+            projectiles.push(new Projectile(player.x, player.y, 5, 'yellow', velocity));
+        }
+    }
+
     for (let index = particles.length - 1; index >= 0; index--) {
         const particle = particles[index];    
         if (particle.alpha <= 0) {
@@ -282,6 +209,13 @@ function animate() {
                     gsap.to(enemy, {
                         radius: enemy.radius - 10
                     });
+                    createScoreLabel({
+                        position: {
+                            x: projectile.x,
+                            y: projectile.y
+                        },
+                        score: 100
+                    });
                     projectiles.splice(projectileIndex, 1);                   
                 } else {
                     // remove enemy
@@ -289,6 +223,13 @@ function animate() {
                     scoreEl.forEach(item => item.innerHTML = score);
                     enemies.splice(index, 1);
                     projectiles.splice(projectileIndex, 1);
+                    createScoreLabel({
+                        position: {
+                            x: projectile.x,
+                            y: projectile.y
+                        },
+                        score: 150
+                    });
                 }
             }
         }
@@ -312,11 +253,24 @@ window.addEventListener('click', (event) => {
     ));
 });
 
+const mouse = {
+    position: {
+        x: 0,
+        y: 0
+    }
+};
+
+addEventListener('mousemove', (event) => {
+    mouse.position.x = event.clientX;
+    mouse.position.y = event.clientY;
+});
+
 // restart game
 buttonRestart.addEventListener('click', () => {
     init();
     animate();
     spawnEnemies();
+    spawnPowerUps();
     gsap.to('#game_over', {
         opacity: 0,
         scale: 0.8,
@@ -331,6 +285,7 @@ buttonStart.addEventListener('click', () => {
     init();
     animate();
     spawnEnemies();
+    spawnPowerUps();
     gsap.to('#start', {
         opacity: 0,
         scale: 0.8,
