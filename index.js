@@ -5,15 +5,13 @@ const newGameUI = document.querySelector('#start');
 const gameOverUI = document.querySelector('#game_over');
 const buttonRestart = document.querySelector('#restartBtn');
 const buttonStart = document.querySelector('#startBtn');
+const volumeUpEl = document.querySelector('#volumeUpEl');
+const volumeOffEl = document.querySelector('#volumeOffEl');
 
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-const x = canvas.width / 2;
-const y = canvas.height / 2;
-
-let player = new Player(x, y, 10, 'white');
-
+let player;
 let projectiles = [];
 let enemies = [];
 let particles = [];
@@ -29,6 +27,8 @@ let game = {
 }
 
 function init() {
+    const x = canvas.width / 2;
+    const y = canvas.height / 2;
     player = new Player(x, y, 10, 'white');
     projectiles = [];
     enemies = [];
@@ -109,6 +109,7 @@ function createScoreLabel({ position, score }) {
     scoreLabel.style.left = position.x + 'px';
     scoreLabel.style.top = position.y + 'px';
     scoreLabel.style.userSelect = 'none';
+    scoreLabel.style.pointerEvents = 'none';
     document.body.appendChild(scoreLabel);
     gsap.to(scoreLabel, {
         opacity: 0,
@@ -297,14 +298,13 @@ function animate() {
     }
 }
 
-window.addEventListener('click', (event) => {
-    if (!audio.background.playing()) {
-        audio.background.play();
-    }
+let audioInitialized = false;
+
+function shoot({x, y}) {
     if (game.active === true) {
         const angle = Math.atan2(
-            (event.clientY - player.y), 
-            (event.clientX - player.x));
+            (y - player.y), 
+            (x - player.x));
         const velocity = {
             x: Math.cos(angle) * 4,
             y: Math.sin(angle) * 4
@@ -317,7 +317,28 @@ window.addEventListener('click', (event) => {
             velocity
         ));
         audio.shoot.play();
+    }    
+}
+
+window.addEventListener('click', (event) => {
+    if (!audio.background.playing() && !audioInitialized) {
+        audio.background.play();
+        audioInitialized = true;
+        volumeUpEl.style.display = 'block';
+        volumeOffEl.style.display = 'none';
     }
+
+    shoot({x: event.clientX, y: event.clientY});
+});
+
+window.addEventListener('touchstart', (event) => {
+    const x = event.touches[0].clientX;
+    const y = event.touches[0].clientY;
+
+    mouse.position.x = event.touches[0].clientX;
+    mouse.position.y = event.touches[0].clientY;
+
+    shoot({ x, y });
 });
 
 const mouse = {
@@ -330,6 +351,11 @@ const mouse = {
 addEventListener('mousemove', (event) => {
     mouse.position.x = event.clientX;
     mouse.position.y = event.clientY;
+});
+
+window.addEventListener('touchmove', (event) => {
+    mouse.position.x = event.touches[0].clientX;
+    mouse.position.y = event.touches[0].clientY;
 });
 
 // restart game
@@ -364,6 +390,45 @@ buttonStart.addEventListener('click', () => {
         }
     });
     audio.select.play();
+});
+
+// mute everything
+volumeUpEl.addEventListener('click', () => {
+    audio.background.pause();
+    volumeOffEl.style.display = 'block';
+    volumeUpEl.style.display = 'none';
+
+    for (let key in audio) {
+        audio[key].mute(true);
+    }
+});
+
+// unmute everything
+volumeOffEl.addEventListener('click', () => {
+    if (audioInitialized) audio.background.play();
+    volumeUpEl.style.display = 'block';
+    volumeOffEl.style.display = 'none';   
+
+    for (let key in audio) {
+        audio[key].mute(false);
+    }
+});
+
+window.addEventListener('resize', () => {
+    canvas.width = innerWidth;
+    canvas.height = innerHeight;
+
+    init();
+});
+
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+        clearInterval(intervalId);
+        clearInterval(spawnPowerUpsId);
+    } else {
+        spawnEnemies();
+        spawnPowerUps();
+    }
 });
 
 window.addEventListener('keydown', (event) => {
