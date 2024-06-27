@@ -3,8 +3,8 @@ const c = canvas.getContext('2d');
 const scoreEl = document.querySelectorAll('.scoreEl');
 const newGameUI = document.querySelector('#start');
 const gameOverUI = document.querySelector('#game_over');
-const buttonRestart = document.querySelector('#restart');
-const buttonStart = document.querySelector('#start');
+const buttonRestart = document.querySelector('#restartBtn');
+const buttonStart = document.querySelector('#startBtn');
 
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
@@ -23,6 +23,10 @@ let spawnPowerUpsId;
 let score = 0;
 let powerUps = [];
 let frames = 0;
+let bacgroundParticles = [];
+let game = {
+    active: false
+}
 
 function init() {
     player = new Player(x, y, 10, 'white');
@@ -34,6 +38,24 @@ function init() {
     scoreEl.forEach(item => item.innerHTML = score);
     powerUps = [];
     frames = 0;
+    bacgroundParticles = [];
+    game.active = true;
+
+    const spacing = 30;
+
+    for (let x = 0; x < canvas.width + spacing; x += spacing) {
+        for (let y = 0; y < canvas.height + spacing; y += spacing) {
+            bacgroundParticles.push(
+                new BackgroundParticle({
+                    position: {
+                        x,
+                        y
+                    },
+                    radius: 3
+                })
+            );
+        }
+    }
 }
 
 function spawnEnemies() {
@@ -104,6 +126,25 @@ function animate() {
     c.fillRect(0, 0, canvas.width, canvas.height);
     frames++;
 
+    bacgroundParticles.forEach(bacgroundParticle => {
+        bacgroundParticle.draw();
+
+        const dist = Math.hypot(
+            player.x - bacgroundParticle.position.x, 
+            player.y - bacgroundParticle.position.y
+        );
+        if (dist < 100) {
+            bacgroundParticle.alpha = 0;
+            if (dist > 70) {
+                bacgroundParticle.alpha = 0.5;
+            }
+        } else if (dist > 100 && bacgroundParticle.alpha < 0.1) {
+            bacgroundParticle.alpha += 0.1;
+        } else if (dist > 100 && bacgroundParticle.alpha > 0.1) {
+            bacgroundParticle -= 0.1;
+        }
+    })
+
     player.update();
 
     for (let i = powerUps.length - 1; i >= 0; i--) {
@@ -124,6 +165,7 @@ function animate() {
             powerUps.splice(i, 1);
             player.powerUp = 'MachineGun';
             player.color = 'yellow';
+            audio.powerUpNoise.play();
 
             //power up runs out
             setTimeout(() => {
@@ -145,6 +187,9 @@ function animate() {
 
         if (frames % 3 === 0) {
             projectiles.push(new Projectile(player.x, player.y, 5, 'yellow', velocity));
+        }
+        if (frames % 5 === 0) {
+            audio.shoot.play();
         }
     }
 
@@ -179,6 +224,8 @@ function animate() {
         if (dist - enemy.radius - player.radius < 1) {
             cancelAnimationFrame(animationId);
             clearInterval(intervalId);
+            audio.death.play();
+            game.active = false;
             gameOverUI.style.display = 'flex';
             gsap.fromTo('#game_over', {scale: 0.8, opacity: 0}, {scale: 1, opacity: 1, ease: 'expo'});
         }
@@ -204,7 +251,7 @@ function animate() {
                 // shrink enemy
                 if (enemy.radius - 10 > 10) {
                     score += 100;
-                    
+                    audio.damageTaken.play();
                     scoreEl.forEach(item => item.innerHTML = score);
                     gsap.to(enemy, {
                         radius: enemy.radius - 10
@@ -221,8 +268,6 @@ function animate() {
                     // remove enemy
                     score += 150;
                     scoreEl.forEach(item => item.innerHTML = score);
-                    enemies.splice(index, 1);
-                    projectiles.splice(projectileIndex, 1);
                     createScoreLabel({
                         position: {
                             x: projectile.x,
@@ -230,6 +275,22 @@ function animate() {
                         },
                         score: 150
                     });
+                    // change background particle color
+                    bacgroundParticles.forEach(bacgroundParticle => {
+                        gsap.set(bacgroundParticle, {
+                            color: 'white',
+                            alpha: 1
+                        });
+                        gsap.to(bacgroundParticle, {
+                            color: enemy.color,
+                            alpha: 0.1
+                        })
+                    });
+
+                    // remove enemy and projectile
+                    audio.explode.play();
+                    enemies.splice(index, 1);
+                    projectiles.splice(projectileIndex, 1);
                 }
             }
         }
@@ -237,20 +298,26 @@ function animate() {
 }
 
 window.addEventListener('click', (event) => {
-    const angle = Math.atan2(
-        (event.clientY - player.y), 
-        (event.clientX - player.x));
-    const velocity = {
-        x: Math.cos(angle) * 4,
-        y: Math.sin(angle) * 4
+    if (!audio.background.playing()) {
+        audio.background.play();
     }
-    projectiles.push(new Projectile(
-        player.x,
-        player.y,
-        5,
-        'white',
-        velocity
-    ));
+    if (game.active === true) {
+        const angle = Math.atan2(
+            (event.clientY - player.y), 
+            (event.clientX - player.x));
+        const velocity = {
+            x: Math.cos(angle) * 4,
+            y: Math.sin(angle) * 4
+        }
+        projectiles.push(new Projectile(
+            player.x,
+            player.y,
+            5,
+            'white',
+            velocity
+        ));
+        audio.shoot.play();
+    }
 });
 
 const mouse = {
@@ -280,6 +347,7 @@ buttonRestart.addEventListener('click', () => {
             gameOverUI.style.display = 'none';
         }
     });
+    audio.select.play();
 });
 buttonStart.addEventListener('click', () => {
     init();
@@ -295,6 +363,7 @@ buttonStart.addEventListener('click', () => {
             newGameUI.style.display = 'none';
         }
     });
+    audio.select.play();
 });
 
 window.addEventListener('keydown', (event) => {
